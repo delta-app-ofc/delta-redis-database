@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routes import consumption, health, properties, ranking
+from app.routes import consumption, health, properties, ranking, sync
 
 app = FastAPI(
     title="Delta Ranking API",
@@ -16,3 +16,4 @@ app.include_router(health.router)
 app.include_router(properties.router)
 app.include_router(consumption.router)
 app.include_router(ranking.router)
+app.include_router(sync.router)

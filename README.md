@@ -83,6 +83,7 @@ Acesse a documentação interativa em: `http://localhost:8000/docs`
 | `POST` | `/save-property` | Cadastra ou atualiza uma unidade |
 | `DELETE` | `/remove-property` | Remove uma unidade e todos os seus dados |
 | `POST` | `/save-consumption` | Grava consumo e atualiza o ranking em tempo real |
+| `POST` | `/sync` | Busca unidades e consumo da delta-api-postgres e popula o Redis |
 | `GET` | `/get-ranking` | Lista o ranking de uma organização em um mês |
 | `GET` | `/get-position` | Posição de uma unidade no ranking |
 | `GET` | `/get-best` | Primeira colocada (card "Unidade mais eficiente") |
@@ -129,13 +130,13 @@ curl "http://localhost:8000/get-best?organizationId=1&period=2026-10&criterion=p
 
 ## Sincronização com o PostgreSQL
 
-O script `sync_from_postgres.py` alimenta a API com dados da `delta-api-postgres`:
+O endpoint `POST /sync` busca dados da `delta-api-postgres` e popula o Redis diretamente:
 
 ```bash
-python sync_from_postgres.py
+curl -X POST http://localhost:8000/sync
 ```
 
-Deve ser executado após o ETL `bi_etl.py` (que roda às 03:00). Lê o mês corrente e o anterior para cobrir viradas de mês.
+Deve ser chamado após o ETL `bi_etl.py` (que roda às 03:00). Sincroniza o mês corrente e o anterior para cobrir viradas de mês. A resposta inclui quantas unidades foram sincronizadas e eventuais erros por unidade.
 
 ---
 
