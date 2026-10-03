@@ -5,12 +5,13 @@ from fastapi import APIRouter, HTTPException
 
 import app.redis_client as rc
 from app.config import POSTGRES_API_URL
+from app.models import SyncResult
 from app.ranking import period_ttl_seconds, recalculate_ranking
 
 router = APIRouter()
 
 
-@router.post("/sync", status_code=200)
+@router.post("/sync", status_code=200, response_model=SyncResult)
 def sync_from_postgres():
     """
     Busca propriedades e consumo da delta-api-postgres e popula o Redis.

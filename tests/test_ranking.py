@@ -245,6 +245,79 @@ def test_remocao_limpa_todas_as_chaves(client, clean_redis):
     assert not list(clean_redis.scan_iter("consumption:1:*"))
 
 
+# ── sincronização com o PostgreSQL ───────────────────────────────────────────
+
+def test_sync_popula_redis(client, clean_redis, monkeypatch):
+    """POST /sync deve buscar unidades do Postgres e popular o Redis."""
+    from datetime import date
+    today = date.today()
+    period = today.strftime("%Y-%m")
+    d1 = f"{period}-01"
+    d2 = f"{period}-02"
+
+    def fake_get(url, timeout=30):
+        class Resp:
+            def raise_for_status(self): pass
+            def json(self_):
+                if "/delta/property" in url:
+                    return [{"id": 1, "organizationId": 10, "name": "Loja Sync",
+                             "classification": "COMERCIAL_VAREJO", "builtAreaM2": 500.0}]
+                return [{"fullDate": d1, "totalLiters": 100.0},
+                        {"fullDate": d2, "totalLiters": 150.0}]
+        return Resp()
+
+    monkeypatch.setattr("app.routes.sync.requests.get", fake_get)
+
+    r = client.post("/sync")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["synced"] == 1
+    assert data["total"] == 1
+    assert data["errors"] == []
+    assert clean_redis.hget("property:1", "name") == "Loja Sync"
+    assert clean_redis.sismember("org:10:properties", "1")
+
+
+def test_sync_filtra_nao_comercial(client, clean_redis, monkeypatch):
+    """POST /sync deve ignorar unidades não-COMERCIAL."""
+    def fake_get(url, timeout=30):
+        class Resp:
+            def raise_for_status(self): pass
+            def json(self_):
+                if "/delta/property" in url:
+                    return [
+                        {"id": 1, "organizationId": 10, "name": "Residencia",
+                         "classification": "RESIDENCIAL_PADRAO", "builtAreaM2": 100.0},
+                        {"id": 2, "organizationId": 10, "name": "Loja",
+                         "classification": "COMERCIAL_VAREJO", "builtAreaM2": 200.0},
+                    ]
+                return []
+        return Resp()
+
+    monkeypatch.setattr("app.routes.sync.requests.get", fake_get)
+
+    r = client.post("/sync")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total"] == 1            # apenas a COMERCIAL
+    assert data["synced"] == 1
+    assert clean_redis.exists("property:1") == 0   # residencial ignorada
+    assert clean_redis.exists("property:2") == 1
+
+
+def test_sync_postgres_indisponivel_retorna_502(client, monkeypatch):
+    """POST /sync deve retornar 502 quando a delta-api-postgres estiver fora."""
+    import requests as req
+
+    def fake_get(url, timeout=30):
+        raise req.exceptions.ConnectionError("Connection refused")
+
+    monkeypatch.setattr("app.routes.sync.requests.get", fake_get)
+
+    r = client.post("/sync")
+    assert r.status_code == 502
+
+
 # ── desempate por propertyId ─────────────────────────────────────────────────
 
 def test_empate_desempate_por_property_id(client):
