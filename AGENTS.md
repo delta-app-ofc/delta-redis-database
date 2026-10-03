@@ -33,11 +33,11 @@ O critério principal é o **consumo médio diário por m² de área construída
 │       ├── health.py     # GET /health
 │       ├── properties.py # POST /save-property, DELETE /remove-property
 │       ├── consumption.py# POST /save-consumption
-│       └── ranking.py    # GET /get-ranking, /get-position, /get-best
+│       ├── ranking.py    # GET /get-ranking, /get-position, /get-best
+│       └── sync.py       # POST /sync (carga a partir da delta-api-postgres)
 ├── tests/
 │   ├── conftest.py       # fixtures pytest (Redis de teste)
 │   └── test_ranking.py   # suite completa de testes
-├── sync_from_postgres.py # carga diária a partir da delta-api-postgres
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── Dockerfile
