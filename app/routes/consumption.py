@@ -25,8 +25,8 @@ def save_consumption(body: ConsumptionIn):
     # Grava todos os dias em pipeline (atômico, sem round-trips extras)
     pipe = rc.r.pipeline()
     for entry in body.days:
-        period = entry.date[:7]   # "YYYY-MM"
-        day = entry.date[8:10]    # "DD"
+        period = entry.date.strftime("%Y-%m")
+        day = entry.date.strftime("%d")
         consumption_key = f"consumption:{body.propertyId}:{period}"
         pipe.hset(consumption_key, day, str(entry.liters))
         pipe.expire(consumption_key, period_ttl_seconds(period))

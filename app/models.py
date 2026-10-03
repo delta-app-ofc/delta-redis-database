@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
@@ -12,10 +13,21 @@ class PropertyIn(BaseModel):
 
 
 class DayEntry(BaseModel):
-    date: str   # formato YYYY-MM-DD
+    date: date       # Pydantic valida formato YYYY-MM-DD automaticamente
     liters: float
 
 
 class ConsumptionIn(BaseModel):
     propertyId: int
     days: list[DayEntry]
+
+
+class SyncError(BaseModel):
+    propertyId: int
+    error: str
+
+
+class SyncResult(BaseModel):
+    synced: int
+    total: int
+    errors: list[SyncError]

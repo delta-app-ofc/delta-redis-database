@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from typing import Optional
 
@@ -8,6 +9,11 @@ import app.redis_client as rc
 router = APIRouter()
 
 VALID_CRITERIA = ("perm2", "consumo")
+
+
+def _validate_period(period: str) -> None:
+    if not re.match(r"^\d{4}-\d{2}$", period):
+        raise HTTPException(status_code=422, detail="period deve estar no formato YYYY-MM.")
 
 
 def _build_item(position: int, property_id: int, period: str) -> dict:
@@ -56,6 +62,7 @@ def get_ranking(
     criterion: str = Query("perm2", alias="criterion"),
     limit: Optional[int] = Query(None, alias="limit"),
 ):
+    _validate_period(period)
     if criterion not in VALID_CRITERIA:
         raise HTTPException(status_code=422, detail="criterion deve ser 'perm2' ou 'consumo'.")
 
@@ -92,6 +99,7 @@ def get_position(
     period: str = Query(..., alias="period"),
     criterion: str = Query("perm2", alias="criterion"),
 ):
+    _validate_period(period)
     if criterion not in VALID_CRITERIA:
         raise HTTPException(status_code=422, detail="criterion deve ser 'perm2' ou 'consumo'.")
 
@@ -124,6 +132,7 @@ def get_best(
     period: str = Query(..., alias="period"),
     criterion: str = Query("perm2", alias="criterion"),
 ):
+    _validate_period(period)
     if criterion not in VALID_CRITERIA:
         raise HTTPException(status_code=422, detail="criterion deve ser 'perm2' ou 'consumo'.")
 
