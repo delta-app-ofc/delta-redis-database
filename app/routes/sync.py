@@ -4,11 +4,21 @@ import requests
 from fastapi import APIRouter, HTTPException
 
 import app.redis_client as rc
-from app.config import POSTGRES_API_URL
+from app.config import POSTGRES_API_EMAIL, POSTGRES_API_PASSWORD, POSTGRES_API_URL
 from app.models import SyncResult
 from app.ranking import period_ttl_seconds, recalculate_ranking
 
 router = APIRouter()
+
+
+def _get_token() -> str:
+    resp = requests.post(
+        f"{POSTGRES_API_URL}/delta/auth/login",
+        json={"email": POSTGRES_API_EMAIL, "password": POSTGRES_API_PASSWORD},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["accessToken"]
 
 
 @router.post("/sync", status_code=200, response_model=SyncResult)
@@ -24,7 +34,9 @@ def sync_from_postgres():
     previous_period = (today.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
 
     try:
-        resp = requests.get(f"{POSTGRES_API_URL}/delta/property", timeout=30)
+        token = _get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = requests.get(f"{POSTGRES_API_URL}/delta/property", headers=headers, timeout=30)
         resp.raise_for_status()
         properties = [
             p for p in resp.json()
@@ -50,6 +62,7 @@ def sync_from_postgres():
 
             r2 = requests.get(
                 f"{POSTGRES_API_URL}/delta/analytics/consumption-daily/{pid}",
+                headers=headers,
                 timeout=30,
             )
             r2.raise_for_status()

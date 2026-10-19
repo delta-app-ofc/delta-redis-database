@@ -255,7 +255,13 @@ def test_sync_popula_redis(client, clean_redis, monkeypatch):
     d1 = f"{period}-01"
     d2 = f"{period}-02"
 
-    def fake_get(url, timeout=30):
+    def fake_post(url, json=None, timeout=30):
+        class Resp:
+            def raise_for_status(self): pass
+            def json(self_): return {"accessToken": "fake-token"}
+        return Resp()
+
+    def fake_get(url, headers=None, timeout=30):
         class Resp:
             def raise_for_status(self): pass
             def json(self_):
@@ -266,6 +272,7 @@ def test_sync_popula_redis(client, clean_redis, monkeypatch):
                         {"fullDate": d2, "totalLiters": 150.0}]
         return Resp()
 
+    monkeypatch.setattr("app.routes.sync.requests.post", fake_post)
     monkeypatch.setattr("app.routes.sync.requests.get", fake_get)
 
     r = client.post("/sync")
@@ -280,7 +287,13 @@ def test_sync_popula_redis(client, clean_redis, monkeypatch):
 
 def test_sync_filtra_nao_comercial(client, clean_redis, monkeypatch):
     """POST /sync deve ignorar unidades não-COMERCIAL."""
-    def fake_get(url, timeout=30):
+    def fake_post(url, json=None, timeout=30):
+        class Resp:
+            def raise_for_status(self): pass
+            def json(self_): return {"accessToken": "fake-token"}
+        return Resp()
+
+    def fake_get(url, headers=None, timeout=30):
         class Resp:
             def raise_for_status(self): pass
             def json(self_):
@@ -294,6 +307,7 @@ def test_sync_filtra_nao_comercial(client, clean_redis, monkeypatch):
                 return []
         return Resp()
 
+    monkeypatch.setattr("app.routes.sync.requests.post", fake_post)
     monkeypatch.setattr("app.routes.sync.requests.get", fake_get)
 
     r = client.post("/sync")
@@ -309,10 +323,10 @@ def test_sync_postgres_indisponivel_retorna_502(client, monkeypatch):
     """POST /sync deve retornar 502 quando a delta-api-postgres estiver fora."""
     import requests as req
 
-    def fake_get(url, timeout=30):
+    def fake_post(url, json=None, timeout=30):
         raise req.exceptions.ConnectionError("Connection refused")
 
-    monkeypatch.setattr("app.routes.sync.requests.get", fake_get)
+    monkeypatch.setattr("app.routes.sync.requests.post", fake_post)
 
     r = client.post("/sync")
     assert r.status_code == 502
