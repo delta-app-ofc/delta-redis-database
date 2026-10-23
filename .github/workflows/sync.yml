@@ -1,0 +1,22 @@
+name: Sync Redis Ranking
+
+on:
+  schedule:
+    - cron: '30 6 * * *'  # 03:30 BRT (UTC-3) = 06:30 UTC — após o ETL das 03:00
+  workflow_dispatch:        # disparo manual pela aba Actions
+
+jobs:
+  sync:
+    name: Chamar POST /sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Disparar sincronização
+        run: |
+          curl -X POST "${{ secrets.REDIS_API_URL }}/sync" \
+            --fail \
+            --silent \
+            --show-error \
+            --max-time 120
+        env:
+          REDIS_API_URL: ${{ secrets.REDIS_API_URL }}
