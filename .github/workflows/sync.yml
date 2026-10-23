@@ -1,8 +1,10 @@
 name: Sync Redis Ranking
 
 on:
+  repository_dispatch:
+    types: [etl-completed]  # disparado pelo bi-etl.yml do delta-database
   schedule:
-    - cron: '30 6 * * *'  # 03:30 BRT (UTC-3) = 06:30 UTC — após o ETL das 03:00
+    - cron: '0 4 * * *'  # fallback diário às 04:00 UTC caso o dispatch falhe
   workflow_dispatch:        # disparo manual pela aba Actions
 
 jobs:
