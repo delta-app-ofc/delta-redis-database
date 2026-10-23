@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PropertyIn(BaseModel):
@@ -13,8 +13,8 @@ class PropertyIn(BaseModel):
 
 
 class DayEntry(BaseModel):
-    date: date       # Pydantic valida formato YYYY-MM-DD automaticamente
-    liters: float
+    date: date
+    liters: float = Field(ge=0)
 
 
 class ConsumptionIn(BaseModel):

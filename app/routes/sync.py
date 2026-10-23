@@ -57,6 +57,8 @@ def sync_from_postgres():
             }
             if prop.get("builtAreaM2"):
                 mapping["areaM2"] = str(prop["builtAreaM2"])
+            else:
+                rc.r.hdel(f"property:{pid}", "areaM2")
             rc.r.hset(f"property:{pid}", mapping=mapping)
             rc.r.sadd(f"org:{prop['organizationId']}:properties", str(pid))
 

@@ -70,6 +70,8 @@ Acesse a documentação interativa em: `http://localhost:8000/docs`
 |---|---|---|
 | `REDIS_URL` | `redis://localhost:6379` | URL de conexão com o Redis |
 | `POSTGRES_API_URL` | `http://localhost:8080` | URL base da `delta-api-postgres` (para o sync) |
+| `POSTGRES_API_EMAIL` | — | E-mail de acesso à `delta-api-postgres` (obrigatório para o `/sync`) |
+| `POSTGRES_API_PASSWORD` | — | Senha de acesso à `delta-api-postgres` (obrigatório para o `/sync`) |
 | `MIN_COVERAGE_RATIO` | `0.5` | Proporção mínima de dias com leitura para entrar no ranking |
 | `RETENTION_MONTHS` | `13` | Meses de retenção dos dados no Redis |
 
@@ -124,7 +126,7 @@ curl "http://localhost:8000/get-best?organizationId=1&period=2026-10&criterion=p
 | `org:{organizationId}:properties` | Set | IDs das unidades da organização |
 | `consumption:{propertyId}:{YYYY-MM}` | Hash | campo = dia (`01`..`31`), valor = litros |
 | `ranking:org:{organizationId}:{YYYY-MM}:perm2` | ZSET | member = ID com zeros à esquerda, score = L/m²·dia |
-| `ranking:org:{organizationId}:{YYYY-MM}:consumo` | ZSET | score = litros totais do mês |
+| `ranking:org:{organizationId}:{YYYY-MM}:consumo` | ZSET | score = média diária de litros |
 
 ---
 

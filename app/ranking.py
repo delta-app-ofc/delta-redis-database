@@ -88,13 +88,14 @@ def recalculate_ranking(property_id: int, period: str) -> None:
         pipe.execute()
         return
 
-    # ZSET consumo: score = litros totais do mês (sem média — só para ordenação)
-    pipe.zadd(consumo_key, {member: total_liters})
+    media_diaria = total_liters / len(closed_readings)
+
+    # ZSET consumo: score = média diária de litros
+    pipe.zadd(consumo_key, {member: media_diaria})
     pipe.expire(consumo_key, ttl)
 
     # ZSET perm2: score = média diária / área (L/m²·dia)
     if area_m2:
-        media_diaria = total_liters / len(closed_readings)
         perm2_score = media_diaria / area_m2
         pipe.zadd(perm2_key, {member: perm2_score})
         pipe.expire(perm2_key, ttl)
