@@ -1,0 +1,17 @@
+# Ambiente de DESENVOLVIMENTO LOCAL para a API de Ranking Redis.
+# Uso:
+#   docker compose -f docker-compose.dev.yml up -d
+#   python -m pytest -q
+#   docker compose -f docker-compose.dev.yml down -v
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: delta_redis_ranking_dev
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 20

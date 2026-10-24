@@ -1,0 +1,24 @@
+name: Sync Redis Ranking
+
+on:
+  repository_dispatch:
+    types: [etl-completed]  # disparado pelo bi-etl.yml do delta-database
+  schedule:
+    - cron: '0 4 * * *'  # fallback diário às 04:00 UTC caso o dispatch falhe
+  workflow_dispatch:        # disparo manual pela aba Actions
+
+jobs:
+  sync:
+    name: Chamar POST /sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Disparar sincronização
+        run: |
+          curl -X POST "${{ secrets.REDIS_API_URL }}/sync" \
+            --fail \
+            --silent \
+            --show-error \
+            --max-time 120
+        env:
+          REDIS_API_URL: ${{ secrets.REDIS_API_URL }}
