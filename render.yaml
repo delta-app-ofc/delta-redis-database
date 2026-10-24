@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: delta-redis-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: REDIS_URL
+        sync: false
+      - key: POSTGRES_API_URL
+        value: https://delta-api-postgres.onrender.com
+      - key: POSTGRES_API_EMAIL
+        sync: false
+      - key: POSTGRES_API_PASSWORD
+        sync: false
+      - key: MIN_COVERAGE_RATIO
+        value: "0.5"
+      - key: RETENTION_MONTHS
+        value: "13"
