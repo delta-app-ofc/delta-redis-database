@@ -1,14 +1,15 @@
 FROM python:3.12-slim
 
-WORKDIR /api
+WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/ app/
+RUN groupadd --gid 1000 app && useradd --system --gid app --home-dir /app app
 
-RUN adduser --disabled-password --gecos "" appuser
-USER appuser
+COPY --chown=app:app app/ app/
+
+USER app
 
 EXPOSE 8000
 
