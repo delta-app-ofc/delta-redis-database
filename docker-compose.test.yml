@@ -22,11 +22,12 @@ services:
         mkdir -p /reports
         exec python -m pytest -q -p no:cacheprovider \
           --junitxml=/reports/junit.xml \
-          --cov=app \
+          --cov=app --cov-branch \
           --cov-report=xml:/reports/coverage.xml \
           --cov-report=html:/reports/htmlcov
     environment:
       PYTHONDONTWRITEBYTECODE: "1"
+      TEST_REDIS_ISOLATED: "1"
       TEST_REDIS_URL: redis://redis:6379/1
     volumes:
       - ./app:/workspace/app:ro

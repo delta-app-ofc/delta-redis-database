@@ -14,6 +14,8 @@ TEST_REDIS_URL = os.getenv("TEST_REDIS_URL", "redis://localhost:6379/1")
 @pytest.fixture(autouse=True)
 def clean_redis():
     """Limpa o banco de testes antes e depois de cada teste."""
+    if os.getenv("TEST_REDIS_ISOLATED") != "1":
+        raise RuntimeError("Use o Compose de testes ou um Redis descartavel com TEST_REDIS_ISOLATED=1")
     r = redis.from_url(TEST_REDIS_URL, decode_responses=True)
     r.flushdb()
     yield r

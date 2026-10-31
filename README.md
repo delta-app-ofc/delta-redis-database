@@ -156,3 +156,5 @@ Deve ser chamado após o ETL `bi_etl.py` (que roda às 03:00). Sincroniza o mês
 - Endpoint de consumo em lote por organização (P9 do TASK.md).
 - Normalização por turnos e dias de operação.
 - Atualização intradiária via Mongo (o `POST /save-consumption` já suporta, basta ligar o produtor).
+
+O fixture limpa o banco Redis de testes: exige TEST_REDIS_ISOLATED=1, definido no Compose/CI descartaveis. A execucao direta sem essa confirmacao nao conecta nem limpa o banco local.
