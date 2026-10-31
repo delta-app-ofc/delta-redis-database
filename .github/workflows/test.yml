@@ -34,3 +34,18 @@ jobs:
         run: python -m pip install -r requirements.txt -r requirements-dev.txt
       - name: Executar testes
         run: python -m pytest -q
+
+  report-ci:
+    name: Reportar resultado do CI na PR
+    if: always() && github.event_name == 'pull_request'
+    needs:
+      - pytest
+    uses: delta-app-ofc/.github/.github/workflows/report_ci.yml@3c58dc7de153e08f489708dea824fef2998ee948
+    with:
+      needs_results: ${{ toJSON(needs) }}
+    secrets:
+      DELTA_ORG_AUTOMATION_TOKEN: ${{ secrets.DELTA_ORG_AUTOMATION_TOKEN }}
+    permissions:
+      actions: read
+      issues: write
+      pull-requests: write
