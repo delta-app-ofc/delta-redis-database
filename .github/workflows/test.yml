@@ -25,6 +25,10 @@ jobs:
           --health-interval 3s
           --health-timeout 5s
           --health-retries 20
+    env:
+      TEST_REDIS_ISOLATED: "1"
+      TEST_REDIS_URL: redis://localhost:6379/1
+      PYTHON_DOTENV_DISABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
