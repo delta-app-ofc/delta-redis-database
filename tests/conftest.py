@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import redis
 from fastapi.testclient import TestClient
@@ -6,7 +8,7 @@ import app.redis_client as redis_client
 from app.main import app
 
 # Usa o banco 1 do Redis local para não interferir com dados de desenvolvimento
-TEST_REDIS_URL = "redis://localhost:6379/1"
+TEST_REDIS_URL = os.getenv("TEST_REDIS_URL", "redis://localhost:6379/1")
 
 
 @pytest.fixture(autouse=True)
