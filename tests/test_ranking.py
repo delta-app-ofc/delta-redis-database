@@ -389,8 +389,8 @@ def test_mudar_organizacao_move_unidade_nos_rankings(client, clean_redis):
 
     register_property(client, 2, 1, "Loja Transferida", area=100.0)
 
-    assert clean_redis.sismember("org:1:properties", "1") is False
-    assert clean_redis.sismember("org:2:properties", "1") is True
+    assert not clean_redis.sismember("org:1:properties", "1")
+    assert clean_redis.sismember("org:2:properties", "1")
     assert client.get(
         "/get-position?organizationId=1&propertyId=1&period=2025-01&criterion=perm2"
     ).status_code == 404
