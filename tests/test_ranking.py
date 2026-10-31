@@ -1,11 +1,13 @@
 """
 Testes de ranking de eficiência hídrica — delta-redis-database
 
-Exige Redis rodando em localhost:6379 (docker compose -f docker-compose.dev.yml up -d).
+Usa TEST_REDIS_URL; o padrão local é localhost:6379/1 e o Compose de teste aponta para Redis descartável.
 """
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
+
+from app.ranking import period_ttl_seconds
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────
@@ -76,6 +78,10 @@ def test_justica_por_m2(client):
     assert items[1]["propertyId"] == 2
     # A consome mais litros no total, mas ganha no perm2
     assert items[0]["consumptionLiters"] > items[1]["consumptionLiters"]
+
+    r_consumption = client.get("/get-ranking?organizationId=1&period=2025-01&criterion=consumo")
+    assert r_consumption.status_code == 200
+    assert [item["propertyId"] for item in r_consumption.json()["items"]] == [2, 1]
 
 
 # ── justiça entre meses ──────────────────────────────────────────────────────
@@ -350,3 +356,58 @@ def test_empate_desempate_por_property_id(client):
     # "000001" < "000002" lexicograficamente → propertyId 1 em primeiro lugar
     assert items[0]["propertyId"] == 1
     assert items[1]["propertyId"] == 2
+
+
+def test_get_best_e_limit_concordam_com_ranking(client):
+    """A melhor unidade e o limite retornado devem respeitar a ordem do ZSET."""
+    for property_id, liters in [(1, 10.0), (2, 20.0), (3, 30.0)]:
+        register_property(client, 1, property_id, f"Loja {property_id}", area=100.0)
+        send_consumption(
+            client,
+            property_id,
+            {f"2025-01-{day:02d}": liters for day in range(1, 32)},
+        )
+
+    ranking = client.get("/get-ranking?organizationId=1&period=2025-01&limit=2")
+    best = client.get("/get-best?organizationId=1&period=2025-01")
+
+    assert ranking.status_code == 200
+    assert [item["propertyId"] for item in ranking.json()["items"]] == [1, 2]
+    assert best.status_code == 200
+    assert best.json()["best"] == ranking.json()["items"][0]
+
+
+def test_mudar_organizacao_move_unidade_nos_rankings(client, clean_redis):
+    """Unidade transferida sai do ZSET antigo e entra no da nova organização."""
+    register_property(client, 1, 1, "Loja Transferida", area=100.0)
+    send_consumption(client, 1, {f"2025-01-{day:02d}": 20.0 for day in range(1, 32)})
+
+    old_position = client.get(
+        "/get-position?organizationId=1&propertyId=1&period=2025-01&criterion=perm2"
+    )
+    assert old_position.status_code == 200
+
+    register_property(client, 2, 1, "Loja Transferida", area=100.0)
+
+    assert not clean_redis.sismember("org:1:properties", "1")
+    assert clean_redis.sismember("org:2:properties", "1")
+    assert client.get(
+        "/get-position?organizationId=1&propertyId=1&period=2025-01&criterion=perm2"
+    ).status_code == 404
+    assert client.get(
+        "/get-position?organizationId=2&propertyId=1&period=2025-01&criterion=perm2"
+    ).status_code == 200
+
+
+def test_period_ttl_handles_year_rollover_and_expired_periods(monkeypatch):
+    """TTL cruza dezembro/janeiro e mantém ao menos um dia para períodos antigos."""
+    class FrozenDate(date):
+        @classmethod
+        def today(cls):
+            return cls(2025, 2, 15)
+
+    monkeypatch.setattr("app.ranking.date", FrozenDate)
+    monkeypatch.setattr("app.ranking.RETENTION_MONTHS", 12)
+
+    assert period_ttl_seconds("2024-03") == 14 * 86400
+    assert period_ttl_seconds("2024-02") == 86400

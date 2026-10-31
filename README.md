@@ -35,7 +35,7 @@ cp .env.example .env
 # edite .env com REDIS_URL real (Redis Cloud) ou deixe localhost para dev
 ```
 
-### 2. Suba o Redis local para desenvolvimento e testes
+### 2. Suba o Redis local para desenvolvimento
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
@@ -48,11 +48,16 @@ pip install -r requirements.txt
 pip install -r requirements-dev.txt
 ```
 
-### 4. Rode os testes
+### 4. Rode os testes em um Redis descartável
 
 ```bash
-python -m pytest -q
+docker compose --env-file docker-compose.test.env -p delta-redis-audit-test -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from tests
+docker compose --env-file docker-compose.test.env -p delta-redis-audit-test -f docker-compose.test.yml down
 ```
+
+O runner instala as dependências de teste e grava os relatórios JUnit e cobertura em `reports/`. A pasta é local e ignorada pelo Git. Ele usa um Redis temporário, sem publicar porta e sem montar um arquivo `.env` local.
+
+Para executar `pytest` diretamente, defina `TEST_REDIS_URL` para apontar a um Redis descartável: a fixture limpa o banco selecionado antes e depois de cada teste.
 
 ### 5. Suba a API
 
@@ -151,3 +156,5 @@ Deve ser chamado após o ETL `bi_etl.py` (que roda às 03:00). Sincroniza o mês
 - Endpoint de consumo em lote por organização (P9 do TASK.md).
 - Normalização por turnos e dias de operação.
 - Atualização intradiária via Mongo (o `POST /save-consumption` já suporta, basta ligar o produtor).
+
+O fixture limpa o banco Redis de testes: exige TEST_REDIS_ISOLATED=1, definido no Compose/CI descartaveis. A execucao direta sem essa confirmacao nao conecta nem limpa o banco local.
