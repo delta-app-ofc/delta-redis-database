@@ -1,4 +1,30 @@
-# delta-redis-database — API de Ranking Redis
+Delta | API de ranking de eficiência hídrica
+
+![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white) ![Redis](https://img.shields.io/badge/dados-Redis-DC382D?logo=redis&logoColor=white) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
+
+API do Projeto Delta que mantém no Redis o ranking mensal de eficiência hídrica das instalações comerciais, normalizando o consumo por área e dia.
+
+**Tags:** `#Delta` `#Redis` `#FastAPI` `#Ranking` `#EficiênciaHídrica`
+
+## Sumário
+
+- [Visão geral](#visão-geral)
+- [Por que normalizar o consumo](#por-que-lm²dia-e-nao-litros-totais)
+- [Como subir](#como-subir)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Endpoints](#endpoints)
+- [Modelo de chaves](#modelo-de-chaves-no-redis)
+- [Sincronização com PostgreSQL](#sincronização-com-o-postgresql)
+- [Evolução futura](#evolução-futura-fora-do-escopo-atual)
+
+## Visão geral
+
+| Finalidade | Atualizar e consultar posições de eficiência hídrica por organização e mês. |
+| Tecnologia | FastAPI, Redis e Python 3.12+. |
+| Métrica | Consumo médio diário por área (`L/m²·dia`), calculado a partir dos dias fechados. |
+| Estado do ranking | Sorted Sets no Redis, atualizados a cada envio de consumo. |
+
+---
 
 API FastAPI que mantém no **Redis** o ranking de eficiência hídrica das instalações comerciais do Projeto Delta, por organização e mês.
 
