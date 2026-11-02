@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   tests:
-    name: Testes e relatórios
+    name: Testes Sonar
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
@@ -58,7 +58,7 @@ jobs:
         with:
           name: sonar-reports
           path: reports/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
 
   scan:
