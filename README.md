@@ -1,23 +1,40 @@
-# delta-redis-database — API de Ranking Redis
+# Delta | API de ranking de eficiência hídrica
 
-API FastAPI que mantém no **Redis** o ranking de eficiência hídrica das instalações comerciais do Projeto Delta, por organização e mês.
+![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white) ![Redis](https://img.shields.io/badge/dados-Redis-DC382D?logo=redis&logoColor=white) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
 
-> **Requisito BD2 atendido:** o Redis é usado para ranking em tempo real — cada `POST /save-consumption` atualiza os Sorted Sets atomicamente, sem nenhum job em lote.
+Esta API mantém no Redis o ranking mensal de eficiência hídrica das unidades comerciais do Delta. Ela registra o consumo, calcula litros por metro quadrado por dia e atualiza as posições conforme recebe novas leituras.
 
----
+**Tags:** `#Delta` `#Redis` `#FastAPI` `#Ranking` `#EficiênciaHídrica`
 
-## Por que L/m²·dia e não litros totais?
+## Sumário
 
-Comparar consumo bruto entre unidades de tamanhos diferentes é injusto. Uma loja de 3.200 m² **sempre** vai consumir mais do que uma de 650 m², mesmo sendo mais eficiente. O critério `perm2` corrige isso:
+- [Visão geral](#visão-geral)
+- [Como o ranking calcula eficiência](#como-o-ranking-calcula-eficiência)
+- [Como subir](#como-subir)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Endpoints](#endpoints)
+- [Modelo de chaves](#modelo-de-chaves-no-redis)
+- [Sincronização com PostgreSQL](#sincronização-com-o-postgresql)
+
+## Visão geral
+
+| Finalidade | Atualizar e consultar posições de eficiência hídrica por organização e mês. |
+| Tecnologia | FastAPI, Redis e Python 3.12+. |
+| Métrica | Consumo médio diário por área (`L/m²·dia`), calculado a partir dos dias fechados. |
+| Estado do ranking | Sorted Sets no Redis, atualizados a cada envio de consumo. |
+
+## Como o ranking calcula eficiência
+
+O critério `perm2` divide o consumo médio diário pela área da unidade e permite comparar instalações de tamanhos diferentes:
 
 ```
 consumo_medio_diario = soma(litros dos dias fechados) / dias_com_leitura
 perm2                = consumo_medio_diario / area_m2       (L/m²·dia)
 ```
 
-- **Menor `perm2` = 1º lugar** (consome menos por m², por dia).
-- Usa média por dia (não total do mês) para tratar fevereiro e março com justiça.
-- O dia corrente não entra no cálculo até fechar — um dia parcial inflaria a eficiência.
+- **Menor `perm2` = 1º lugar**: menor consumo por metro quadrado ao dia.
+- O cálculo usa a média diária dos dias fechados do mês.
+- A leitura do dia corrente entra no ranking após o fechamento do dia.
 
 ---
 
@@ -32,7 +49,7 @@ perm2                = consumo_medio_diario / area_m2       (L/m²·dia)
 
 ```bash
 cp .env.example .env
-# edite .env com REDIS_URL real (Redis Cloud) ou deixe localhost para dev
+# configure REDIS_URL para o Redis do ambiente ou use localhost no desenvolvimento
 ```
 
 ### 2. Suba o Redis local para desenvolvimento
@@ -137,7 +154,7 @@ curl "http://localhost:8000/get-best?organizationId=1&period=2026-10&criterion=p
 
 ## Sincronização com o PostgreSQL
 
-O endpoint `POST /sync` busca unidades comerciais e consumo diário da `delta-api-postgres` e popula o Redis diretamente — sem script externo:
+O endpoint `POST /sync` busca unidades comerciais e consumo diário da `delta-api-postgres` e carrega esses dados no Redis:
 
 ```bash
 curl -X POST http://localhost:8000/sync
@@ -151,10 +168,4 @@ Deve ser chamado após o ETL `bi_etl.py` (que roda às 03:00). Sincroniza o mês
 
 ---
 
-## Evolução futura (fora do escopo atual)
-
-- Endpoint de consumo em lote por organização (P9 do TASK.md).
-- Normalização por turnos e dias de operação.
-- Atualização intradiária via Mongo (o `POST /save-consumption` já suporta, basta ligar o produtor).
-
-O fixture limpa o banco Redis de testes: exige TEST_REDIS_ISOLATED=1, definido no Compose/CI descartaveis. A execucao direta sem essa confirmacao nao conecta nem limpa o banco local.
+Os testes usam `TEST_REDIS_ISOLATED=1`, definido pelo Compose e pelo CI, para identificar o Redis descartável da suíte.
