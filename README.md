@@ -1,4 +1,4 @@
-Delta | API de ranking de eficiência hídrica
+# Delta | API de ranking de eficiência hídrica
 
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white) ![Redis](https://img.shields.io/badge/dados-Redis-DC382D?logo=redis&logoColor=white) ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
 
