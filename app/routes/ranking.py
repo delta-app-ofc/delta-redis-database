@@ -1,12 +1,13 @@
 import re
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
 import app.redis_client as rc
+from app.models import BestResult, PositionResult, RankingResult
 
-router = APIRouter()
+router = APIRouter(tags=["Ranking"])
 
 VALID_CRITERIA = ("perm2", "consumo")
 
@@ -55,12 +56,23 @@ def _build_item(position: int, property_id: int, period: str) -> dict:
     }
 
 
-@router.get("/get-ranking")
+@router.get(
+    "/get-ranking",
+    response_model=RankingResult,
+    summary="Consultar ranking de eficiência",
+    description=(
+        "Lista as instalações classificadas para a organização e o mês informados. "
+        "perm2 (padrão) ordena pela média diária por área (L/m²·dia); consumo ordena "
+        "pela média diária em litros. O menor valor fica em primeiro. O dia atual é "
+        "ignorado, e instalações sem área são listadas em withoutArea."
+    ),
+    responses={422: {"description": "Mês fora do formato AAAA-MM ou critério não aceito."}},
+)
 def get_ranking(
-    organizationId: int = Query(..., alias="organizationId"),
-    period: str = Query(..., alias="period"),
-    criterion: str = Query("perm2", alias="criterion"),
-    limit: Optional[int] = Query(None, alias="limit"),
+    organizationId: int = Query(..., alias="organizationId", description="Identificador da organização", examples=[3]),
+    period: str = Query(..., alias="period", description="Mês consultado no formato AAAA-MM", examples=["2026-10"]),
+    criterion: Literal["perm2", "consumo"] = Query("perm2", alias="criterion", description="Critério: perm2 (L/m²·dia) ou consumo (média diária em litros)"),
+    limit: Optional[int] = Query(None, alias="limit", description="Quantidade máxima de posições retornadas; sem valor, retorna todas", examples=[10]),
 ):
     _validate_period(period)
     if criterion not in VALID_CRITERIA:
@@ -92,12 +104,21 @@ def get_ranking(
     }
 
 
-@router.get("/get-position")
+@router.get(
+    "/get-position",
+    response_model=PositionResult,
+    summary="Consultar posição de uma instalação",
+    description="Retorna a posição, o total de participantes e o score da instalação para a organização, o mês e o critério informados.",
+    responses={
+        404: {"description": "Instalação fora do ranking para o critério e o período informados."},
+        422: {"description": "Mês fora do formato AAAA-MM ou critério não aceito."},
+    },
+)
 def get_position(
-    organizationId: int = Query(..., alias="organizationId"),
-    propertyId: int = Query(..., alias="propertyId"),
-    period: str = Query(..., alias="period"),
-    criterion: str = Query("perm2", alias="criterion"),
+    organizationId: int = Query(..., alias="organizationId", description="Identificador da organização", examples=[3]),
+    propertyId: int = Query(..., alias="propertyId", description="Identificador da instalação", examples=[42]),
+    period: str = Query(..., alias="period", description="Mês consultado no formato AAAA-MM", examples=["2026-10"]),
+    criterion: Literal["perm2", "consumo"] = Query("perm2", alias="criterion", description="Critério: perm2 ou consumo"),
 ):
     _validate_period(period)
     if criterion not in VALID_CRITERIA:
@@ -126,11 +147,20 @@ def get_position(
     }
 
 
-@router.get("/get-best")
+@router.get(
+    "/get-best",
+    response_model=BestResult,
+    summary="Consultar instalação mais eficiente",
+    description="Retorna a instalação na primeira posição para a organização, o mês e o critério informados.",
+    responses={
+        404: {"description": "Nenhuma instalação no ranking para o período informado."},
+        422: {"description": "Mês fora do formato AAAA-MM ou critério não aceito."},
+    },
+)
 def get_best(
-    organizationId: int = Query(..., alias="organizationId"),
-    period: str = Query(..., alias="period"),
-    criterion: str = Query("perm2", alias="criterion"),
+    organizationId: int = Query(..., alias="organizationId", description="Identificador da organização", examples=[3]),
+    period: str = Query(..., alias="period", description="Mês consultado no formato AAAA-MM", examples=["2026-10"]),
+    criterion: Literal["perm2", "consumo"] = Query("perm2", alias="criterion", description="Critério: perm2 ou consumo"),
 ):
     _validate_period(period)
     if criterion not in VALID_CRITERIA:

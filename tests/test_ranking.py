@@ -309,6 +309,8 @@ def test_sync_filtra_nao_comercial(client, clean_redis, monkeypatch):
                          "classification": "RESIDENCIAL_PADRAO", "builtAreaM2": 100.0},
                         {"id": 2, "organizationId": 10, "name": "Loja",
                          "classification": "COMERCIAL_VAREJO", "builtAreaM2": 200.0},
+                        {"id": 3, "organizationId": None, "name": "Loja sem organização",
+                         "classification": "COMERCIAL_VAREJO", "builtAreaM2": 200.0},
                     ]
                 return []
         return Resp()
@@ -323,6 +325,8 @@ def test_sync_filtra_nao_comercial(client, clean_redis, monkeypatch):
     assert data["synced"] == 1
     assert clean_redis.exists("property:1") == 0   # residencial ignorada
     assert clean_redis.exists("property:2") == 1
+    assert clean_redis.exists("property:3") == 0   # unidade sem organização ignorada
+    assert clean_redis.exists("org:None:properties") == 0
 
 
 def test_sync_postgres_indisponivel_retorna_502(client, monkeypatch):
