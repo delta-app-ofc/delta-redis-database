@@ -9,7 +9,7 @@ from app.config import POSTGRES_API_EMAIL, POSTGRES_API_PASSWORD, POSTGRES_API_U
 from app.models import SyncResult
 from app.ranking import period_ttl_seconds, recalculate_ranking
 
-router = APIRouter()
+router = APIRouter(tags=["Sincronização"])
 SYNC_WORKERS = 8
 
 
@@ -34,7 +34,20 @@ def _get_token() -> str:
     return resp.json()["accessToken"]
 
 
-@router.post("/sync", status_code=200, response_model=SyncResult)
+@router.post(
+    "/sync",
+    status_code=200,
+    response_model=SyncResult,
+    summary="Sincronizar instalações e consumo",
+    description=(
+        "Busca instalações comerciais e consumo diário na delta-api-postgres, "
+        "atualiza os dados no Redis e recalcula os rankings do mês atual e do anterior. "
+        "Deve ser executado após a atualização dos dados de consumo. Falhas individuais "
+        "são retornadas em errors; se a API PostgreSQL estiver indisponível ou nenhuma "
+        "instalação puder ser sincronizada, a operação retorna erro."
+    ),
+    responses={502: {"description": "Não foi possível consultar a API PostgreSQL ou sincronizar qualquer instalação."}},
+)
 def sync_from_postgres():
     """
     Busca propriedades e consumo da delta-api-postgres e popula o Redis.

@@ -1,13 +1,25 @@
 from fastapi import APIRouter, HTTPException, Query
 
 import app.redis_client as rc
-from app.models import PropertyIn
+from app.models import PropertyIn, StatusResult
 from app.ranking import recalculate_ranking
 
-router = APIRouter()
+router = APIRouter(tags=["Instalações"])
 
 
-@router.post("/save-property", status_code=200)
+@router.post(
+    "/save-property",
+    status_code=200,
+    response_model=StatusResult,
+    summary="Cadastrar ou atualizar instalação",
+    description=(
+        "Grava os dados da instalação e a associação com a organização. "
+        "Somente classificações cujo grupo começa com COMERCIAL são aceitas. "
+        "A área é opcional; quando informada, deve ser maior que zero. "
+        "Alterações de organização ou área recalculam os rankings existentes."
+    ),
+    responses={422: {"description": "Grupo residencial ou área igual ou menor que zero."}},
+)
 def save_property(body: PropertyIn):
     if not body.classificationGroup.startswith("COMERCIAL"):
         raise HTTPException(
@@ -61,10 +73,20 @@ def save_property(body: PropertyIn):
     return {"status": "ok"}
 
 
-@router.delete("/remove-property", status_code=200)
+@router.delete(
+    "/remove-property",
+    status_code=200,
+    response_model=StatusResult,
+    summary="Remover instalação",
+    description=(
+        "Remove o cadastro da instalação, seus consumos e sua participação nos rankings de todos os períodos. "
+        "organizationId é um parâmetro obrigatório da requisição; a organização vinculada é obtida do cadastro da instalação."
+    ),
+    responses={404: {"description": "Instalação não encontrada."}},
+)
 def remove_property(
-    organizationId: int = Query(..., alias="organizationId"),
-    propertyId: int = Query(..., alias="propertyId"),
+    organizationId: int = Query(..., alias="organizationId", description="Identificador da organização enviado pelo cliente", examples=[3]),
+    propertyId: int = Query(..., alias="propertyId", description="Identificador da instalação a remover", examples=[42]),
 ):
     prop = rc.r.hgetall(f"property:{propertyId}")
     if not prop:

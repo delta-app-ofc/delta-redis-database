@@ -11,6 +11,13 @@ app = FastAPI(
         "registro de consumo — sem batch, sem delay."
     ),
     version="1.0.0",
+    openapi_tags=[
+        {"name": "Saúde", "description": "Disponibilidade da API e conexão com o Redis."},
+        {"name": "Instalações", "description": "Cadastro, atualização e remoção das instalações usadas no ranking."},
+        {"name": "Consumo", "description": "Registro de leituras diárias e atualização do ranking."},
+        {"name": "Ranking", "description": "Consulta das classificações por organização, mês e critério."},
+        {"name": "Sincronização", "description": "Carga de instalações e consumo a partir da API PostgreSQL."},
+    ],
 )
 
 app.add_middleware(
