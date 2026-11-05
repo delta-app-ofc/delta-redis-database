@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import consumption, health, properties, ranking, sync
 
@@ -10,6 +11,14 @@ app = FastAPI(
         "registro de consumo — sem batch, sem delay."
     ),
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(health.router)

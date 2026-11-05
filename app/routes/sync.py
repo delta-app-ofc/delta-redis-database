@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from fastapi import APIRouter, HTTPException
@@ -9,6 +10,18 @@ from app.models import SyncResult
 from app.ranking import period_ttl_seconds, recalculate_ranking
 
 router = APIRouter()
+SYNC_WORKERS = 8
+
+
+def _positive_organization_id(value: object) -> int | None:
+    """Reject missing and sentinel IDs so unassigned properties never enter an org set."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        organization_id = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return organization_id if organization_id > 0 else None
 
 
 def _get_token() -> str:
@@ -38,17 +51,18 @@ def sync_from_postgres():
         headers = {"Authorization": f"Bearer {token}"}
         resp = requests.get(f"{POSTGRES_API_URL}/delta/property", headers=headers, timeout=30)
         resp.raise_for_status()
-        properties = [
-            p for p in resp.json()
-            if str(p.get("classification", "")).startswith("COMERCIAL")
-        ]
+        properties = []
+        for item in resp.json():
+            if not isinstance(item, dict) or not str(item.get("classification", "")).startswith("COMERCIAL"):
+                continue
+            organization_id = _positive_organization_id(item.get("organizationId"))
+            if organization_id is None:
+                continue
+            properties.append({**item, "organizationId": organization_id})
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Erro ao buscar unidades: {e}")
 
-    synced = 0
-    errors: list[dict] = []
-
-    for prop in properties:
+    def sync_property(prop: dict) -> tuple[int, str | None]:
         pid = prop["id"]
         try:
             mapping: dict = {
@@ -89,8 +103,23 @@ def sync_from_postgres():
                 for period in periods_updated:
                     recalculate_ranking(pid, period)
 
-            synced += 1
+            return pid, None
         except Exception as e:
-            errors.append({"propertyId": pid, "error": str(e)})
+            return pid, str(e)
+
+    synced = 0
+    errors: list[dict] = []
+    with ThreadPoolExecutor(max_workers=SYNC_WORKERS) as executor:
+        futures = [executor.submit(sync_property, prop) for prop in properties]
+        for future in as_completed(futures):
+            pid, error = future.result()
+            if error:
+                errors.append({"propertyId": pid, "error": error})
+            else:
+                synced += 1
+
+    errors.sort(key=lambda item: item["propertyId"])
+    if properties and synced == 0:
+        raise HTTPException(status_code=502, detail={"message": "Nenhuma unidade pôde ser sincronizada.", "errors": errors})
 
     return {"synced": synced, "total": len(properties), "errors": errors}
